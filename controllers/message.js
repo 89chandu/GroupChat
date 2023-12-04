@@ -12,7 +12,7 @@ exports.addMsg=async(req, res, next)=>{
         const messageInput=req.body.messageData;
         if(isstringinvalid(messageInput))
         {
-            return res.status(400).json({err:'Bad parameters.something is missing'});
+            return res.status(400).json({err:'Bad parameters.something is missing in code'});
         }
         const data= await messageModel.create({message:messageInput,userId:req.user.id});
         res.status(201).json({messageData:data,success:true,});
