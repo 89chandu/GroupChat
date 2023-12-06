@@ -51,6 +51,6 @@ GroupMessage.belongsTo(Group)
 db.sync({alter:true})
 .then(()=>{
     
-app.listen(80)
+app.listen(3100)
 })
 .catch(err=>console.log(err))
