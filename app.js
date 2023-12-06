@@ -1,103 +1,72 @@
-require('dotenv').config();
-const path = require('path');
-const cors = require('cors');
-const express = require('express');
-const bodyParser = require('body-parser');
-const sequelize=require('./util/database');
-const helmet=require('helmet');
-const morgan=require('morgan');
-const fs=require('fs');
-const socketio=require('socket.io');
-const http=require('http');
-const CronJob = require('cron').CronJob;
 
-const userRoute=require('./routes/user');
-const messageRoute=require('./routes/message');
-const groupRoute=require('./routes/group');
-const passwordRoute=require('./routes/password');
-const fileRoute=require('./routes/files');
+require('dotenv').config()
 
-const User=require('./models/user');
-const Message=require('./models/message');
-const Archieve=require('./models/archievedchat');
-const Group=require('./models/group');
-const UserGroup=require('./models/userGroup');
-const forgotpassword=require('./models/forgotpwdreq');
-
-const app = express();
-const server = http.createServer(app);
-const io = socketio(server);
-
-const accessLogStream=fs.createWriteStream(path.join(__dirname,'access.log'),{flags:'a'});
-
-app.use(helmet({contentSecurityPolicy: false}));  
-app.use(morgan('combined',{stream:accessLogStream}));
- 
-app.use(cors(
-    // {
-    //     origin:"http://127.0.0.1:5500"
-    // }
-));
-
-app.use(bodyParser.json());
+const express=require('express')
+const cors=require('cors')
+const bodyParser=require('body-parser')
+const path=require('path')
+const fs=require('fs')
 
 
-app.use('/user',userRoute);
-app.use('/message',messageRoute);
-app.use('/group',groupRoute);
-app.use('/password',passwordRoute); 
-app.use('/file',fileRoute);
 
-app.use((req,res)=>{
-    res.sendFile(path.join(__dirname,`public/${req.url}`));
-  });
+const db=require('./database')
+const userRoutes=require('./Routes/user')
+const chatRoutes=require('./Routes/chat')
+const groupRoutes=require('./Routes/group')
 
-User.hasMany(Message);
-Message.belongsTo(User);
 
-Group.hasMany(Message);
-Message.belongsTo(Group);
+const User=require('./Models/User')
+const Chat=require('./Models/Chat')
+const GroupMessage=require('./Models/GroupMessage')
+const UserGroup=require('./Models/UserGroup')
+const Group=require('./Models/Group')
 
-User.belongsToMany(Group,{through:UserGroup});
-Group.belongsToMany(User,{through:UserGroup});
 
-User.hasMany(forgotpassword);
-forgotpassword.belongsTo(User); 
-  
-sequelize
-        .sync()
-    // .sync({force:true})
-    .then(()=>{
-      server.listen(3100);
-      
-      io.on('connection', socket => {
-        socket.on('new-user', data => {
-          io.emit('user-connected', data);
-        })
-        socket.on('send-chat-message', data => {
-          socket.broadcast.emit('chat-message', data);
-        })
-      })
-      
-      new CronJob(
-        '0 0 * * *',
-        async function() {
-           const chats=await Message.findAll();
-           console.log('per day chat',chats);
+const socketServer=require('./Server-Socket/server')
 
-          for(const chat of chats){
-            await Archieve.create({message:chat.message,userId:chat.userId,groupId:chat.groupId});
-            console.log('id',chat.id);
-            await Message.destroy({where:{id:chat.id}});
-          }
-        },
-        null,
-        true
-    );
 
-    })
-    .catch(err=>console.log(err));  
 
+
+
+
+
+app=express()
+
+
+
+
+app.use(cors({
+    origin:'*',
+    methods:['GET','POST']
+}))
+app.use(bodyParser.json({extends:false}))
+
+
+
+app.use('/User',userRoutes)
+app.use('/Chat',chatRoutes)
+app.use('/Group',groupRoutes)
+
+
+app.use((req, res) => {
     
+    res.sendFile(path.join(__dirname, `public/${req.url}`));
+})
+
+User.hasMany(Chat)
+Chat.belongsTo(User)
+
+
+User.belongsToMany(Group,{through:UserGroup})
+Group.belongsToMany(User,{through:UserGroup})
+
+Group.hasMany(GroupMessage)
+GroupMessage.belongsTo(Group)
+
+
+db.sync({alter:true})
+.then(()=>{
     
-    
+app.listen(3100)
+})
+.catch(err=>console.log(err))

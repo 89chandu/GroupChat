@@ -1,13 +1,16 @@
 const Sequelize=require('sequelize')
 const sequelize=require('../database')
 
-module.exports=sequelize.define('Usergroup',{
+module.exports=sequelize.define('Chat',{
     id:{
         type:Sequelize.INTEGER,
         primaryKey:true,
         autoIncrement:true,
     },
     
-    memberType:Sequelize.STRING
-    
+    chat:Sequelize.STRING,
+    isFile:{
+        type:Sequelize.BOOLEAN,
+        defaultValue:0
+    }
 })
